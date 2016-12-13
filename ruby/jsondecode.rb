@@ -13,12 +13,19 @@ def validateFile()
 	end
 	end
 end
+puts "Enter output file name:"
+file_open = File.new(gets.chomp+".json", "w")
 
-
-
-#file = File.read('su444v1026.json')
 data_hash = JSON.parse(validateFile())
-data_hash.each {|value| puts value} 
+#JSON.dump(data_hash, file_open)
+data_hash.each {|value| file_open.write(value)} 
 
 
+
+
+#other examples 
+#data_hash.each {|key| puts "KEY : #{key}"}
+#data_hash.each do |key|
+#	file_open.write(key)
+#end
 #file = File.read('su444v1026.json')

@@ -3,24 +3,17 @@ require 'json'
 def validateFile()
 	test = false
 	while test != true 
-	begin 
+	begin # try 
 		puts "enter file name: "
 		file = File.read(gets.chomp+".json")
-		test = false
 		return file
-		continue
-		
-	rescue 
+		test = true
+	rescue #catch if fail
 		puts "File not found! try again!!"
 	end
 	end
 end
 
-
-
-#file = File.read('su444v1026.json')
 data_hash = JSON.parse(validateFile())
+#JSON.dump(data_hash, file_open)
 data_hash.each {|value| puts value} 
-
-
-#file = File.read('su444v1026.json')
