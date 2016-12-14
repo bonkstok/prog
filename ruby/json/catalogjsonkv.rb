@@ -1,8 +1,8 @@
 require 'json'
-print "enter file name to write to:"
+print "Eter filename to write to:"
 write_file = File.new(gets.chomp + ".json", "w")
 
-print "\n Enter name of json file: "
+print "Enter name of json file: "
 json_file = File.read(gets.chomp + ".json")
 
 data_hash = JSON.parse(json_file)
