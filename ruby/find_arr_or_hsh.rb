@@ -1,8 +1,7 @@
 require 'json'
 #file_write = File.new('read_parameter', 'w')
-hsh = {empty: true}
+hsh = {empty: true} # supply your own hash to check ok?
 #hsh.each {|key,value| file_write.puts("key =---> #{key} =---> #{value}")}
-#hsh['install_switches'].each {|key, value| puts key}
 #puts hsh['install_switches'].class
 json_file = File.read('sw444v1105.json')
 data_hash = JSON.parse(json_file)
