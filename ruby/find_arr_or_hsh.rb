@@ -16,3 +16,15 @@ for i in i...hash_length
 	else
 		puts "some weird class dude." end 
 end 
+
+i = 1 #reset i since the loop above incremented it.. check with puts i 
+data_hash.each do |key, value|
+		if data_hash[key].class == Hash
+			puts "Key #{i}:#{key} is a HASH!"
+			i += 1
+		elsif data_hash[key].class == Array
+			puts "Key #{i}:#{key} is a ARRAY!"
+			i += 1
+		else
+			puts "Key #{key} ==> some weird class dude." end 
+end 
