@@ -26,9 +26,9 @@ else
   exit
 fi
 
-LOGFILE="/tmp/$domain.out"
 #functions to start and stop
 function stopnm {
+  LOGFILE="/tmp/$1.out"
   domain_bin="/apps/oracle_test/Middleware/user_projects/domains/domain_$1/bin"
   echo "Stopping nodemanager for $1"
   if [[ -d $domain_bin ]];then
@@ -42,6 +42,7 @@ function stopnm {
 }
 
 function startnm {
+  LOGFILE="/tmp/$1.out"
   domain_bin="/apps/oracle_test/Middleware/user_projects/domains/domain_$1/bin"
   echo "Starting nodemanager for $1"
   if [[ -d $domain_bin ]];then
@@ -51,6 +52,15 @@ function startnm {
   else
    echo "Did not find bin directory for domain $domain"
   fi
+
+}
+
+function stopallnm {
+
+for i in ${DOMAINS[*]}; do
+ stopnm $i
+ sleep 5
+done
 
 }
 
@@ -67,7 +77,6 @@ case $action in
   start)
     startnm
     ;;
-
   stop)
     stopnm
     ;;
