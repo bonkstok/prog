@@ -75,10 +75,10 @@ done
 
 case $action in
   start)
-    startnm
+    startnm $domain
     ;;
   stop)
-    stopnm
+    stopnm $domain
     ;;
   stopall)
     stopallnm
