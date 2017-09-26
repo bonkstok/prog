@@ -1,4 +1,5 @@
 #!/bin/bash
+action=$1
 alias date='date +"%Y-%M-%d-%H:%M:%S"'
 adminserver=AdminServer
 domain=E1_Apps
@@ -39,8 +40,6 @@ else
 fi
 }
 
-
-
 function startAdminServer
 {
 admstate=$(checkAdminState)
@@ -52,10 +51,12 @@ else
     cd "$domain_home/bin"
     pwd
     #nohup sh startWebLogic.sh 1> $logfileout 2>&1 &
+    sleep 2
   else
     echo "$(date) No boot.properties file has been found, exiting" >> $logfile
   fi
 fi
+
 }
 
 function startManagedServers
@@ -69,7 +70,7 @@ if [[ "$admstate" == "stopped" ]] ; then
     if [[ "$i" -eq 0 ]] ; then # start the admin server
       echo "$(date) Starting admin server" >> $logfile
       i=$((i+1))
-      sleep 5
+      startAdminServer
     else #when $i is not 0 just wait for the admin server to be in running tstate
       echo "$(date) Waiting for admin server to be in running state. Been waiting for $(($i*5)) seconds." >> $logfile
       echo "$(date) Admin state is:$admstate" >> $logfile
@@ -81,11 +82,18 @@ else # if adminserver is running, continue
   #continue
   echo "$(date) Admin server is running, starting managed servers." >> $logfile
 fi
-echo "here i am"
-echo "$admstate"
 if [[ "$admstate" == "running" ]] ; then
   for msserver in ${msservers[*]} ; do
-    echo "Starting $msserver"
+    if [[ -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
+      echo "Starting $msserver" >> $logfile
+      cd "$domain_home/bin"
+      pwd
+      echo "start $msserver $adminurl"
+    else
+      echo "No boot.properties file has been found for $msserver." >> $logfile
+      break
+    fi
+
   done
 else
   echo "Admin server did not start within the time given, exit." > $logfile
@@ -94,5 +102,15 @@ fi
 
 #new log file entry:
 echo "####### $(date) #######" >> $logfile
-#checkManagedState "AC920_SU444V1121"
-startManagedServers
+#main program
+case $action in
+  startall)
+    startManagedServers
+  ;;
+  startadm)
+    startAdminServer
+  ;;
+  *)
+    echo "Usage: $0 {startall | startadm }"
+    echo "No parameter given." >> $logfile
+esac
