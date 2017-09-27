@@ -40,6 +40,18 @@ else
 fi
 }
 
+function checkManagedServersState
+{
+for msserver in ${msservers[*]} ; do
+  mssocketcheck=$(netstat -tulpn 2> /dev/null | grep $mslistenaddr:${msports[$msserver]}| awk '{print $4}')
+  if [[ "$mssocketcheck" == "$mslistenaddr:${msports[$msserver]}" ]] ; then
+  echo "Managed server $msserver is running."
+  else
+  echo "Managed server $msserver is currently down."
+  fi
+done
+}
+
 function startAdminServer
 {
 admstate=$(checkAdminState)
@@ -56,7 +68,6 @@ else
     echo "$(date) No boot.properties file has been found, exiting" >> $logfile
   fi
 fi
-
 }
 
 function startManagedServers
@@ -110,7 +121,13 @@ case $action in
   startadm)
     startAdminServer
   ;;
+  startms)
+    startManagedServers
+  ;;
+  statusms)
+    checkManagedServersState
+  ;;
   *)
-    echo "Usage: $0 {startall | startadm }"
+    echo "Usage: $0 {startall | startadm | startms  | statusms }"
     echo "No parameter given." >> $logfile
 esac
