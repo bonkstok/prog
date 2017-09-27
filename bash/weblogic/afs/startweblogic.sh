@@ -10,7 +10,7 @@ msports=( ["MS_${domain}_01"]=6041 )
 mslistenaddr="10.206.51.103"
 
  #admlogfile_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain/$adminserver/logs"
-logfile="/tmp/${domain}_${adminserver}_start.log"
+logfile="/tmp/${domain}_${action}_start.log"
 logfileout="/tmp/${domain}_${adminserver}.out"
 
 admlistenaddr="10.206.51.103"
@@ -60,7 +60,6 @@ if [[ "$admstate" == "running" ]] ; then
   echo "Admin server is already running. Skipping"
 else
   if [[ -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
-    echo "$(date) Starting admin server" >> $logfile
     cd "$domain_home/bin"
     pwd
     echo "starting $adminserver"
@@ -102,8 +101,10 @@ if [[ "$admstate" == "running" ]] ; then
       echo "$(date) Starting $msserver" >> $logfile
       cd "$domain_home/bin"
       pwd
-      echo "start $msserver $adminurl"
+      echo "starting $msserver $adminurl"
       nohup sh startManagedWebLogic.sh $msserver $adminurl > /tmp/start-${msserver} 2>&1 &
+      echo "Started $msserver"
+      echo "$(date) started $msserver" >> $logfile
     else
       echo "No boot.properties file has been found for $msserver." >> $logfile
       break
@@ -115,6 +116,7 @@ fi
 }
 
 #new log file entry:
+echo "##################################" >> $logfile
 echo "####### $(date) #######" >> $logfile
 #main program
 case $action in
