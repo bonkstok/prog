@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 action=$1
 alias date='date +"%Y-%M-%d-%H:%M:%S"'
 adminserver=AdminServer
@@ -9,7 +9,7 @@ declare -A msports
 msports=( ["AC920_SU444V1121"]=7005 ["DV920_SU444V1121"]=7007 ["PY920_SU444V1121"]=7006 )
 mslistenaddr="10.207.49.7"
 
-#admlogfile_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain/$adminserver/logs"
+ #admlogfile_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain/$adminserver/logs"
 logfile="/tmp/${domain}_${adminserver}_stop.log"
 logfileout="/tmp/${domain}_${adminserver}.out"
 
@@ -38,6 +38,18 @@ if [[ "$mssocketcheck" == "$mslistenaddr:${msports[$msserver]}" ]] ; then
 else
   echo "stopped"
 fi
+}
+
+function checkManagedServersState
+{
+for msserver in ${msservers[*]} ; do
+  mssocketcheck=$(netstat -tulpn 2> /dev/null | grep $mslistenaddr:${msports[$msserver]}| awk '{print $4}')
+  if [[ "$mssocketcheck" == "$mslistenaddr:${msports[$msserver]}" ]] ; then
+  echo "Managed server $msserver is running."
+  else
+  echo "Managed server $msserver is currently down."
+  fi
+done
 }
 
 function stopAdminServer
@@ -83,7 +95,13 @@ case $action in
   stopadm)
     stopAdminServer
   ;;
+  stopms)
+    stopManagedServers
+  ;;
+  statusms)
+    checkManagedServersState
+  ;;
   *)
-    echo "Usage: $0 {stopall | stopadm }"
+    echo "Usage: $0 {stopall | stopadm | stopms | statusms }"
     echo "No parameter given." >> $logfile
 esac
