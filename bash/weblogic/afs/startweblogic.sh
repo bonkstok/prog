@@ -1,19 +1,20 @@
 #!/bin/bash
 action=$1
 alias date='date +"%Y-%M-%d-%H:%M:%S"'
-adminserver=AdminServer
-domain=E1_Apps
-domain_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain"
-declare -a msservers=("AC920_SU444V1121" "DV920_SU444V1121" "PY920_SU444V1121")
+domain="04RELT"
+adminserver="AdminServer_$domain"
+domain_home="/apps/oracle_test/Middleware/user_projects/domains/domain_$domain"
+declare -a msservers=("MS_${domain}_01")
 declare -A msports
-msports=( ["AC920_SU444V1121"]=7005 ["DV920_SU444V1121"]=7007 ["PY920_SU444V1121"]=7006 )
-mslistenaddr="10.207.49.7"
+msports=( ["MS_${domain}_01"]=6041 )
+mslistenaddr="10.206.51.103"
 
-logfile="/tmp/${domain}_${adminserver}.log"
+ #admlogfile_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain/$adminserver/logs"
+logfile="/tmp/${domain}_${adminserver}_start.log"
 logfileout="/tmp/${domain}_${adminserver}.out"
 
-admlistenaddr="10.207.49.7"
-admlistenport=7001
+admlistenaddr="10.206.51.103"
+admlistenport=5041
 admlistensocket=${admlistenaddr}:${admlistenport}
 adminurl="t3://$admlistensocket"
 
@@ -62,8 +63,9 @@ else
     echo "$(date) Starting admin server" >> $logfile
     cd "$domain_home/bin"
     pwd
-    #nohup sh startWebLogic.sh 1> $logfileout 2>&1 &
-    sleep 2
+    echo "starting $adminserver"
+    nohup sh startWebLogic.sh 1> $logfileout 2>&1 &
+    sleep 50
   else
     echo "$(date) No boot.properties file has been found, exiting" >> $logfile
   fi
@@ -76,17 +78,18 @@ admstate=$(checkAdminState)
 i=0
 #whuke kiio najeb
 if [[ "$admstate" == "stopped" ]] ; then
-  while [[ $i -lt 10 && "$admstate" == "running" ]] ; do
+  while [[ $i -lt 10 && "$admstate" == "stopped" ]] ; do
     admstate=$(checkAdminState)
     if [[ "$i" -eq 0 ]] ; then # start the admin server
       echo "$(date) Starting admin server" >> $logfile
       i=$((i+1))
       startAdminServer
     else #when $i is not 0 just wait for the admin server to be in running tstate
-      echo "$(date) Waiting for admin server to be in running state. Been waiting for $(($i*5)) seconds." >> $logfile
+      echo "$(date) Waiting for admin server to be in running state. Been waiting for $(($i*50)) seconds." >> $logfile
       echo "$(date) Admin state is:$admstate" >> $logfile
+      echo "Sleeping...Waiting for $adminserver to be online."
       i=$((i+1))
-      sleep 5
+      sleep 50
     fi
   done
 else # if adminserver is running, continue
@@ -96,15 +99,15 @@ fi
 if [[ "$admstate" == "running" ]] ; then
   for msserver in ${msservers[*]} ; do
     if [[ -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
-      echo "Starting $msserver" >> $logfile
+      echo "$(date) Starting $msserver" >> $logfile
       cd "$domain_home/bin"
       pwd
       echo "start $msserver $adminurl"
+      nohup sh startManagedWebLogic.sh $msserver $adminurl > /tmp/start-${msserver} 2>&1 &
     else
       echo "No boot.properties file has been found for $msserver." >> $logfile
       break
     fi
-
   done
 else
   echo "Admin server did not start within the time given, exit." > $logfile
