@@ -10,7 +10,7 @@ msports=( ["MS_${domain}_01"]=6041 )
 mslistenaddr="10.206.51.103"
 
  #admlogfile_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain/$adminserver/logs"
-logfile="/tmp/${domain}_${adminserver}_start.log"
+logfile="/tmp/${domain}_${action}_stop.log"
 logfileout="/tmp/${domain}_${adminserver}.out"
 
 admlistenaddr="10.206.51.103"
@@ -32,7 +32,6 @@ function checkManagedState
 {
 msserver=$1
 mssocketcheck=$(netstat -tulpn 2> /dev/null | grep $mslistenaddr:${msports[$msserver]}| awk '{print $4}')
-echo "$mssocketcheck"
 if [[ "$mssocketcheck" == "$mslistenaddr:${msports[$msserver]}" ]] ; then
   #echo "$msserver -> socket $mssocketcheck."
   echo "running"
@@ -53,84 +52,85 @@ for msserver in ${msservers[*]} ; do
 done
 }
 
-function startAdminServer
+function stopAdminServer
 {
 admstate=$(checkAdminState)
 if [[ "$admstate" == "running" ]] ; then
-  echo "Admin server is already running. Skipping"
-else
-  if [[ -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
-    echo "$(date) Starting admin server" >> $logfile
-    cd "$domain_home/bin"
-    pwd
-    echo "starting $adminserver"
-    nohup sh startWebLogic.sh 1> $logfileout 2>&1 &
-    sleep 50
-  else
-    echo "$(date) No boot.properties file has been found, exiting" >> $logfile
-  fi
-fi
-}
-
-function startManagedServers
-{
-admstate=$(checkAdminState)
-i=0
-#whuke kiio najeb
-if [[ "$admstate" == "stopped" ]] ; then
-  while [[ $i -lt 10 && "$admstate" == "stopped" ]] ; do
-    admstate=$(checkAdminState)
-    if [[ "$i" -eq 0 ]] ; then # start the admin server
-      echo "$(date) Starting admin server" >> $logfile
-      i=$((i+1))
-      startAdminServer
-    else #when $i is not 0 just wait for the admin server to be in running tstate
-      echo "$(date) Waiting for admin server to be in running state. Been waiting for $(($i*50)) seconds." >> $logfile
-      echo "$(date) Admin state is:$admstate" >> $logfile
-      echo "Sleeping...Waiting for $adminserver to be online."
-      i=$((i+1))
-      sleep 50
-    fi
-  done
-else # if adminserver is running, continue
-  #continue
-  echo "$(date) Admin server is running, starting managed servers." >> $logfile
-fi
-if [[ "$admstate" == "running" ]] ; then
-  for msserver in ${msservers[*]} ; do
-    if [[ -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
-      echo "$(date) Starting $msserver" >> $logfile
+  echo "Admin server is already stopped. Skipping"
+  i=0
+  while [[ "$admstate" == "running" && "$i" -lt 10 ]] ; do
+    if [[ "$i" -eq 0 && -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
+      admstate=$(checkAdminState)
+      echo "$(date) Stopping $adminserver. Attempt:$i" >> $logfile
+      i=$(($i+1))
       cd "$domain_home/bin"
-      pwd
-      echo "start $msserver $adminurl"
-      nohup sh startManagedWebLogic.sh $msserver $adminurl > /tmp/start-${msserver} 2>&1 &
+    #nohup sh stopManagedWebLogic.sh $msserver $adminurl >
+      nohup sh stopWebLogic.sh > /tmp/stop-$adminserver 2>&1 &
+      echo "Stopped $adminserver."
+      sleep 20
     else
-      echo "No boot.properties file has been found for $msserver." >> $logfile
-      break
+      echo "$(date) Waiting for $adminserver to be shutdown. Attempt:$i - Waiting for $(($i*20)) seconds." >> $logfile
+      i=$((i+1))
+      sleep 20
     fi
   done
 else
-  echo "Admin server did not start within the time given, exit." > $logfile
+  echo "Admin server is already stopped. Skipping"
 fi
 }
 
+function stopManagedServers
+{
+#whuke kiio najeb
+for msserver in ${msservers[*]} ; do
+  i=0
+  msstate=$(checkManagedState $msserver)
+  while [[  "$msstate"  == "running" && $i -lt 10 ]] ; do
+     #echo "$mslistenaddr:${msports[$msserver]}"
+     #echo "running"
+     msstate=$(checkManagedState $msserver)
+     if [[ "$i" -eq 0 && -f "$domain_home/servers/$msserver/security/boot.properties" ]] ; then
+       echo "$(date) Stopping $msserver. Attempt:$i" >> $logfile
+       i=$((i+1))
+       cd "$domain_home/bin"
+       nohup sh stopManagedWebLogic.sh $msserver $adminurl > /tmp/stop-${msserver} 2>&1 &
+       echo "Stopped $msserver."
+       sleep 20
+     else
+       echo "$(date) Waiting for $msserver to be shutdown. Attempt:$i - Waiting for $(($i*20)) seconds." >> $logfile
+       i=$((i+1))
+       sleep 20
+     fi
+  done
+  if [[  "$msstate"  == "running" ]] ; then
+    echo "$(date) $msserver is still running after 200 seconds. Forcing $msserver to be shutdown." >> $logfile
+    mspid=$(netstat -tulpn 2> /dev/null | grep $mslistenaddr:${msports[$msserver]} | awk '{print $7}' | awk -F "/" '{print $1}')
+    kill -9 $mspid
+    echo "$(date) Killed $msserver with PID $mspid" >> $logfile
+  else
+    continue
+  fi
+done
+}
 #new log file entry:
+echo "##################################" >> $logfile
 echo "####### $(date) #######" >> $logfile
-#main program
+
 case $action in
-  startall)
-    startManagedServers
+  stopall)
+    stopManagedServers
+    stopAdminServer
   ;;
-  startadm)
-    startAdminServer
+  stopadm)
+    stopAdminServer
   ;;
-  startms)
-    startManagedServers
+  stopms)
+    stopManagedServers
   ;;
   statusms)
     checkManagedServersState
   ;;
   *)
-    echo "Usage: $0 {startall | startadm | startms  | statusms }"
+    echo "Usage: $0 {stopall | stopadm | stopms | statusms }"
     echo "No parameter given." >> $logfile
 esac
