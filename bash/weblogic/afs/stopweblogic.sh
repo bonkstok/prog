@@ -1,20 +1,20 @@
- #!/bin/bash
+#!/bin/bash
 action=$1
 alias date='date +"%Y-%M-%d-%H:%M:%S"'
-adminserver=AdminServer
-domain=E1_Apps
-domain_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain"
-declare -a msservers=("AC920_SU444V1121" "DV920_SU444V1121" "PY920_SU444V1121")
+domain="04RELT"
+adminserver="AdminServer_$domain"
+domain_home="/apps/oracle_test/Middleware/user_projects/domains/domain_$domain"
+declare -a msservers=("MS_${domain}_01")
 declare -A msports
-msports=( ["AC920_SU444V1121"]=7005 ["DV920_SU444V1121"]=7007 ["PY920_SU444V1121"]=7006 )
-mslistenaddr="10.207.49.7"
+msports=( ["MS_${domain}_01"]=6041 )
+mslistenaddr="10.206.51.103"
 
  #admlogfile_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain/$adminserver/logs"
-logfile="/tmp/${domain}_${adminserver}_stop.log"
+logfile="/tmp/${domain}_${action}_stop.log"
 logfileout="/tmp/${domain}_${adminserver}.out"
 
-admlistenaddr="10.207.49.7"
-admlistenport=7001
+admlistenaddr="10.206.51.103"
+admlistenport=5041
 admlistensocket=${admlistenaddr}:${admlistenport}
 adminurl="t3://$admlistensocket"
 
@@ -55,42 +55,72 @@ done
 function stopAdminServer
 {
 admstate=$(checkAdminState)
-if [[ "$admstate" == "stopped" ]] ; then
+if [[ "$admstate" == "running" ]] ; then
   echo "Admin server is already stopped. Skipping"
+  i=0
+  while [[ "$admstate" == "running" && "$i" -lt 10 ]] ; do
+    if [[ "$i" -eq 0 && -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
+      admstate=$(checkAdminState)
+      echo "$(date) Stopping $adminserver. Attempt:$i" >> $logfile
+      i=$(($i+1))
+      cd "$domain_home/bin"
+    #nohup sh stopManagedWebLogic.sh $msserver $adminurl >
+      nohup sh stopWebLogic.sh > /tmp/stop-$adminserver 2>&1 &
+      echo "Stopped $adminserver."
+      sleep 20
+    else
+      echo "$(date) Waiting for $adminserver to be shutdown. Attempt:$i - Waiting for $(($i*20)) seconds." >> $logfile
+      i=$((i+1))
+      sleep 20
+    fi
+  done
 else
-  if [[ -f "$domain_home/servers/$adminserver/security/boot.properties" ]] ; then
-    echo "$(date) Stopping admin server" >> $logfile
-    cd "$domain_home/bin"
-    pwd
-    #nohup sh stopWebLogic.sh 1> $logfileout 2>&1 &
-    sleep 2
-  else
-    echo "$(date) No boot.properties file has been found, exiting" >> $logfile
-  fi
+  echo "Admin server is already stopped. Skipping"
 fi
 }
 
 function stopManagedServers
 {
-i=0
 #whuke kiio najeb
 for msserver in ${msservers[*]} ; do
+  i=0
   msstate=$(checkManagedState $msserver)
-  if [[  "$msstate"  == "running" ]] ; then
+  while [[  "$msstate"  == "running" && $i -lt 10 ]] ; do
      #echo "$mslistenaddr:${msports[$msserver]}"
-     echo "running"
+     #echo "running"
+     msstate=$(checkManagedState $msserver)
+     if [[ "$i" -eq 0 && -f "$domain_home/servers/$msserver/security/boot.properties" ]] ; then
+       echo "$(date) Stopping $msserver. Attempt:$i" >> $logfile
+       i=$((i+1))
+       cd "$domain_home/bin"
+       nohup sh stopManagedWebLogic.sh $msserver $adminurl > /tmp/stop-${msserver} 2>&1 &
+       echo "Stopped $msserver."
+       sleep 20
+     else
+       echo "$(date) Waiting for $msserver to be shutdown. Attempt:$i - Waiting for $(($i*20)) seconds." >> $logfile
+       i=$((i+1))
+       sleep 20
+     fi
+  done
+  if [[  "$msstate"  == "running" ]] ; then
+    echo "$(date) $msserver is still running after 200 seconds. Forcing $msserver to be shutdown." >> $logfile
+    mspid=$(netstat -tulpn 2> /dev/null | grep $mslistenaddr:${msports[$msserver]} | awk '{print $7}' | awk -F "/" '{print $1}')
+    kill -9 $mspid
+    echo "$(date) Killed $msserver with PID $mspid" >> $logfile
   else
-     echo "stopped"
+    continue
   fi
 done
 }
+}
 #new log file entry:
+echo "##################################" >> $logfile
 echo "####### $(date) #######" >> $logfile
-echo "####### Shutting down##" >> $logfile
 
 case $action in
   stopall)
     stopManagedServers
+    stopAdminServer
   ;;
   stopadm)
     stopAdminServer
