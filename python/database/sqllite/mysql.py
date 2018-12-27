@@ -4,7 +4,7 @@ def main():
 
 	 conn = connect(host="localhost",
 						user="root",
-						passwd="casper",
+						passwd="",
 						db="pytest")
 	 cursor = conn.cursor(cursors.DictCursor)
 	 # cursor.execute( """CREATE TABLE IF NOT EXISTS persoon
