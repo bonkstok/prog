@@ -4,7 +4,7 @@ domain=jvv
 domain_home="/apps/oracle/wlserver/user_projects/domains/$domain"
 logfile="/tmp/shutdown_${domain}_${adminserver}.log"
 
-admlistenaddr="192.168.242.172"
+admlistenaddr=""
 admlistenport=7001
 admlistensocket=${admlistenaddr}:${admlistenport}
 admurl="t3://$listensocket"
