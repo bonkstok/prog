@@ -7,13 +7,13 @@ domain_home="/apps/oracle_test/Middleware/user_projects/domains/domain_$domain"
 declare -a msservers=("MS_${domain}_01")
 declare -A msports
 msports=( ["MS_${domain}_01"]=6041 )
-mslistenaddr="10.206.51.103"
+mslistenaddr=""
 
  #admlogfile_home="/apps/oracle/Middleware/Oracle_Home/user_projects/domains/$domain/$adminserver/logs"
 logfile="/tmp/${domain}_${action}_start.log"
 logfileout="/tmp/${domain}_${adminserver}.out"
 
-admlistenaddr="10.206.51.103"
+admlistenaddr=""
 admlistenport=5041
 admlistensocket=${admlistenaddr}:${admlistenport}
 adminurl="t3://$admlistensocket"
