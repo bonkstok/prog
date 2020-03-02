@@ -5,7 +5,7 @@ domain_home="/apps/oracle/wlserver/user_projects/domains/$domain"
 declare -a msservers=("MS1")
 logfile="/tmp/${domain}_${adminserver}.log"
 
-listenaddr="192.168.242.172"
+listenaddr=""
 listenport=7001
 listensocket=${listenaddr}:${listenport}
 adminurl="t3://$listensocket"
